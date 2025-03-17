@@ -52,7 +52,7 @@ export type TokenAnalysis = {
   };
 };
 
-// Add interface for 0x quote response
+// Interface for 0x quote response
 export interface ZeroExQuote {
   price: string;
   guaranteedPrice: string;
@@ -96,7 +96,7 @@ export interface ZeroExQuote {
   };
 }
 
-// Add new interface for 0x price response
+// Interface for 0x price response, extending ZeroExQuote with possible issues
 export interface ZeroExPriceResponse extends ZeroExQuote {
   issues?: {
     allowance?: {
@@ -105,7 +105,7 @@ export interface ZeroExPriceResponse extends ZeroExQuote {
   };
 }
 
-// Add a new interface to track analyzed tokens
+// Interface to track the state of analyzed tokens
 export interface TokenAnalysisState {
   lastAnalyzedIndex: number;
   analyzedTokens: Set<string>;

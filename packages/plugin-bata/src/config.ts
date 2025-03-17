@@ -1,3 +1,4 @@
+// Configuration for providers and chain specifics.
 export const PROVIDER_CONFIG = {
   BIRDEYE_API: "https://public-api.birdeye.so",
   TOKEN_SECURITY_ENDPOINT: "/defi/token_security?address=",
@@ -24,38 +25,34 @@ export const PROVIDER_CONFIG = {
   RETRY_DELAY: 2000,
 };
 
-// Add configuration for enabled chains
 export const CHAIN_CONFIG = {
-  SOLANA_ENABLED: false, // Can be controlled via settings
-  BASE_ENABLED: true, // Can be controlled via settings
+  BNB_ENABLED: true,
+  SOLANA_ENABLED: false,
+  BASE_ENABLED: false,
 };
 
-// Add Base chain configuration near other export constants
-export const BASE_CONFIG = {
-  RPC_URL: process.env.EVM_PROVIDER_URL || "https://mainnet.base.org",
-  ROUTER_ADDRESS: "0x327Df1E6de05895d2ab08513aaDD9313Fe505d86", // Base Uniswap V2 Router
-  WETH_ADDRESS: "0x4200000000000000000000000000000000000006", // Base WETH
-  CHAIN_ID: 8453,
-  // Add Aerodrome-specific addresses
-  AERODROME: {
-    WETH: "0x4200000000000000000000000000000000000006",
-    USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    USDT: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
+export const BNB_CONFIG = {
+  RPC_URL: process.env.BSC_PROVIDER_URL || "https://bsc-dataseed.binance.org/",
+  ROUTER_ADDRESS: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+  WBNB_ADDRESS: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+  CHAIN_ID: 56,
+  STABLECOINS: {
+    BUSD: "0xe9e7cea3dedca5984780bafc599bd69add087d56",
+    USDT: "0x55d398326f99059ff775485246999027b3197955",
+    USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
   },
 };
 
-// Add 0x API configuration near other export constants
 export const ZEROEX_CONFIG = {
   API_URL: "https://api.0x.org",
   API_KEY: process.env.ZEROEX_API_KEY || "",
   QUOTE_ENDPOINT: "/swap/permit2/quote",
   PRICE_ENDPOINT: "/swap/permit2/price",
-  SUPPORTED_CHAINS: {
-    BASE: 8453,
-  },
+  SUPPORTED_CHAINS: { BSC: 56 },
   HEADERS: {
     "Content-Type": "application/json",
     "0x-api-key": process.env.ZEROEX_API_KEY || "",
     "0x-version": "v2",
   },
 };
+
