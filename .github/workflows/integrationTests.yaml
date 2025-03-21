@@ -18,8 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true  
+          submodules: recursive 
           fetch-depth: 0 
+      
+      - name: Ensure submodules are updated
+        run: |
+          git submodule sync
+          git submodule update --init --recursive
 
       - uses: pnpm/action-setup@v3
         with:
