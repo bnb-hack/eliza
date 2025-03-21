@@ -5,6 +5,7 @@ import { bnbPlugin } from "@elizaos/plugin-bnb"; // plugin-bnb's base plugin
 import NodeCache from "node-cache";
 import * as fs from "fs";
 import * as path from "path";
+import { updateSellDetails } from "./services/tradePerformance";
 
 import { analyzeTradeAction } from "./actions/analyzeTrade";
 import { trustEvaluator } from "./evaluators/trust";
@@ -90,7 +91,7 @@ const plugin: Plugin = {
           const { trustScore, riskLevel, tradingAdvice } = trustEval;
           elizaLogger.log(`Trust evaluation for ${tokenAddress}: score=${trustScore.toFixed(2)}, risk=${riskLevel}, advice=${tradingAdvice}`);
 
-          // Retrieve market data from custom provider (includes DexScreener data)
+          // Retrieve market data (including DexScreener data) from the provider
           const tokenProvider = new TrustScoreProvider();
           const tokenDataResult = await tokenProvider.getTokenProvider(tokenAddress).getProcessedTokenData();
 
@@ -99,11 +100,11 @@ const plugin: Plugin = {
             tokenAddress,
             price: tokenDataResult.tradeData.price,
             volume: tokenDataResult.tradeData.volume24h,
-            marketCap: tokenDataResult.dexscreenerData.pairs[0].marketCap || 0,
-            liquidity: tokenDataResult.dexscreenerData.pairs[0].liquidity.usd,
+            marketCap: tokenDataResult.dexScreenerData.pairs[0].marketCap || 0,
+            liquidity: tokenDataResult.dexScreenerData.pairs[0].liquidity.usd,
             holderDistribution: tokenDataResult.holderDistributionTrend,
             trustScore,
-            dexscreener: tokenDataResult.dexscreenerData,
+            dexscreener: tokenDataResult.dexScreenerData,
             position: null as TradePosition | null,
           };
 
@@ -146,9 +147,19 @@ const plugin: Plugin = {
             });
             if (tradeResult.success) {
               elizaLogger.log(`Trade executed for ${tokenAddress}:`, { hash: tradeResult.hash, amount: tradeAmount });
+              
+              // Trade performance update integration from rabbi‑trader 
+              try {
+                const recommenderId = "default-recommender"; 
+                const performanceUpdate = await updateSellDetails(runtime, tokenAddress, recommenderId, tradeAmount, null, tokenDataResult);
+                elizaLogger.log("Trade performance updated:", performanceUpdate);
+              } catch (error) {
+                elizaLogger.error("Failed to update trade performance:", error);
+              }
+
               if (twitterService && canTweet("trade")) {
                 await tweetTrade(twitterService, {
-                  token: tokenDataResult.dexscreenerData.pairs[0]?.baseToken.symbol || tokenAddress,
+                  token: tokenDataResult.dexScreenerData.pairs[0]?.baseToken.symbol || tokenAddress,
                   tokenAddress,
                   amount: tradeAmount,
                   price: tokenDataResult.tradeData.price,
