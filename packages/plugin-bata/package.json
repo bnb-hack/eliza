@@ -5,7 +5,7 @@
     "type": "module",
     "types": "dist/index.d.ts",
     "dependencies": {
-        "@elizaos/client-twitter": "workspace:*",
+        
         "@elizaos/core": "workspace:*",
         "@elizaos/plugin-bnb": "workspace:*",
         "@elizaos/plugin-trustdb": "workspace:*",
