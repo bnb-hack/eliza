@@ -1,6 +1,6 @@
 [submodule "characters"]
 	path = characters
 	url = https://github.com/elizaos/characters
-[submodule "plugin-rabbi-trader"]
-	path = plugin-rabbi-trader
-	url = https://github.com/elizaos-plugins/plugin-rabbi-trader.git
+[submodule "packages/plugin-rabbi-trader"]
+  path = packages/plugin-rabbi-trader
+  url = https://github.com/elizaos-plugins/plugin-rabbi-trader.git
