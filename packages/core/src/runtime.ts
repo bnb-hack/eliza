@@ -405,6 +405,8 @@ export class AgentRuntime implements IAgentRuntime {
             ...(opts.plugins ?? []),
         ];
 
+        elizaLogger.info(`Number of plugins: ${this.plugins.length}`);
+
         this.plugins.forEach((plugin) => {
             plugin.actions?.forEach((action) => {
                 this.registerAction(action);
@@ -476,14 +478,46 @@ export class AgentRuntime implements IAgentRuntime {
         }
 
         // should already be initiailized
-        /*
-        for (const plugin of this.plugins) {
-            if (plugin.services)
+        elizaLogger.info(`Number of plugins: ${this.plugins.length}`);
+
+        let rabbiplugin = this.plugins[1]
+        rabbiplugin.actions?.forEach((action) => {
+            this.registerAction(action);
+        });
+        rabbiplugin.evaluators?.forEach((evaluator) => {
+            this.registerEvaluator(evaluator);
+        });
+        rabbiplugin.services?.forEach((service) => {
+            this.registerService(service);
+        });
+
+        rabbiplugin.providers?.forEach((provider) => {
+            this.registerContextProvider(provider);
+        });
+
+        rabbiplugin.adapters?.forEach((adapter) => {
+            this.registerAdapter(adapter);
+        });
+        
+        this.providers.forEach((provider, idx) => {
+            elizaLogger.info(`Provider #${idx}:`, {
+              ctor: Object.getPrototypeOf(provider).constructor.name,
+              props: Object.keys(provider),
+              raw: provider,
+            });
+          });
+          
+
+        // for (const plugin of this.plugins) {
+        //     if (plugin.services)
+        //         await Promise.all(
+        //             plugin.services?.map((service) => service.initialize(this)),
+        //         );
+        // }
+        if (rabbiplugin.services)
                 await Promise.all(
-                    plugin.services?.map((service) => service.initialize(this)),
+                    rabbiplugin.services?.map((service) => service.initialize(this)),
                 );
-        }
-        */
 
         if (
             this.character &&

@@ -1,10 +1,12 @@
 import { type Character, ModelProviderName } from "@elizaos/core";
+import createRabbiTraderPlugin from '@elizaos/plugin-rabbi-trader';
+import { solanaPlugin } from "@elizaos/plugin-solana";
 
 export const defaultCharacter: Character = {
     name: "Eliza",
     username: "eliza",
     plugins: [],
-    modelProvider: ModelProviderName.LLAMALOCAL,
+    modelProvider: ModelProviderName.HYPERBOLIC,
     settings: {
         secrets: {},
         voice: {

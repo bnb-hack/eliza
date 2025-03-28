@@ -21,6 +21,7 @@ import {
 } from "@elizaos/core";
 import { defaultCharacter } from "./defaultCharacter.ts";
 import { mainCharacter } from "./nader.character.ts";
+import createRabbiTraderPlugin from '@elizaos/plugin-rabbi-trader';
 
 import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
 import JSON5 from 'json5';
@@ -364,7 +365,7 @@ export async function loadCharacters(
 
     if (loadedCharacters.length === 0) {
         elizaLogger.info("No characters found, using default character");
-        loadedCharacters.push(mainCharacter);
+        loadedCharacters.push(defaultCharacter);
     }
 
     return loadedCharacters;
@@ -749,6 +750,15 @@ async function startAgent(
         // find a db from the plugins
         db = await findDatabaseAdapter(runtime);
         runtime.databaseAdapter = db;
+        
+        const rabbiTraderPlugin = await createRabbiTraderPlugin(
+            (key: string) => process.env[key],
+            runtime
+        );
+
+        runtime.plugins.push(rabbiTraderPlugin);
+
+        
 
         // initialize cache
         const cache = initializeCache(
@@ -834,7 +844,7 @@ const startAgents = async () => {
     let serverPort = Number.parseInt(settings.SERVER_PORT || "3000");
     const args = parseArguments();
     const charactersArg = args.characters || args.character;
-    let characters = [mainCharacter];
+    let characters = [defaultCharacter];
 
     if ((charactersArg) || hasValidRemoteUrls()) {
         characters = await loadCharacters(charactersArg);
