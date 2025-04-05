@@ -1,14 +1,17 @@
 import type { Plugin, IAgentRuntime, Memory, State } from "@elizaos/core";
 import { elizaLogger, settings } from "@elizaos/core";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
-import {
-  solanaPlugin,
-  trustScoreProvider,
-  trustEvaluator,
-  getTokenBalance,
-} from "@elizaos/plugin-solana";
+// Remove Solana-specific imports
+// import {
+//   solanaPlugin,
+//   trustScoreProvider,
+//   trustEvaluator,
+//   getTokenBalance,
+// } from "@elizaos/plugin-solana";
 import { TokenProvider } from "./providers/token";
-import { Connection, PublicKey } from "@solana/web3.js";
+// Replace Solana imports with ethers
+// import { Connection, PublicKey } from "@solana/web3.js";
+import { ethers } from "ethers";
 import type { WalletClient, Signature, Balance } from "@goat-sdk/core";
 import * as fs from "fs";
 import * as path from "path";
@@ -28,7 +31,7 @@ import {
   executeTrade,
   getChainWalletBalance,
   getWalletBalance,
-  getWalletKeypair,
+  // getWalletKeypair, // Remove Solana-specific function
 } from "./wallet";
 import type { ProcessedTokenData } from "./types";
 import { analyzeTradeAction } from "./actions/analyzeTrade";
@@ -44,9 +47,9 @@ interface ProviderResult {
   text?: string;
 }
 
-// Extended WalletProvider interface to ensure proper typing
+// Updated WalletProvider interface for BSC
 interface ExtendedWalletProvider extends WalletClient {
-  connection: Connection;
+  provider: ethers.providers.JsonRpcProvider; // Changed from Connection to provider
   signMessage(message: string): Promise<Signature>;
   getFormattedPortfolio: (runtime: IAgentRuntime) => Promise<string>;
   balanceOf: (tokenAddress: string) => Promise<ExtendedBalance>;
@@ -66,7 +69,8 @@ interface ExtendedWalletProvider extends WalletClient {
 }
 
 const REQUIRED_SETTINGS = {
-  WALLET_PUBLIC_KEY: "Solana wallet public key",
+  BSC_WALLET_ADDRESS: "BSC wallet address",
+  BSC_PRIVATE_KEY: "BSC wallet private key",
   DEXSCREENER_WATCHLIST_ID: "DexScreener watchlist ID",
   COINGECKO_API_KEY: "CoinGecko API key",
 } as const;
@@ -82,21 +86,20 @@ interface ExtendedPlugin extends Plugin {
   autoStart?: boolean;
 }
 
-// Add this helper function
-function validateSolanaAddress(address: string | undefined): boolean {
+// Replace Solana validation with BSC validation
+function validateBscAddress(address: string | undefined): boolean {
   if (!address) return false;
   try {
-    // Handle Solana addresses
-    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
-      elizaLogger.warn(`Solana address failed format check: ${address}`);
+    // Handle BSC addresses
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      elizaLogger.warn(`BSC address failed format check: ${address}`);
       return false;
     }
 
-    // Verify it's a valid Solana public key
-    const pubKey = new PublicKey(address);
-    const isValid = Boolean(pubKey.toBase58());
+    // Verify it's a valid BSC address
+    const isValid = ethers.utils.isAddress(address);
     elizaLogger.info(
-      `Solana address validation result for ${address}: ${isValid}`
+      `BSC address validation result for ${address}: ${isValid}`
     );
     return isValid;
   } catch (error) {
@@ -105,7 +108,7 @@ function validateSolanaAddress(address: string | undefined): boolean {
   }
 }
 
-// Add function to load token addresses
+// Update function to load token addresses
 export function loadTokenAddresses(): string[] {
   try {
     const filePath = path.resolve(
@@ -117,14 +120,13 @@ export function loadTokenAddresses(): string[] {
 
     // Validate addresses
     const validAddresses = addresses.filter((addr: string) => {
-      // Solana address validation
-      return validateSolanaAddress(addr);
+      // BSC address validation (starts with 0x)
+      return validateBscAddress(addr);
     });
 
     elizaLogger.info("Loaded token addresses:", {
       total: validAddresses.length,
-      solana: validAddresses.filter((addr) => !addr.startsWith("0x")).length,
-      base: validAddresses.filter((addr) => addr.startsWith("0x")).length,
+      bsc: validAddresses.length,
     });
 
     return validAddresses;
@@ -142,68 +144,11 @@ interface CacheEntry {
   analysisResult: any;
 }
 
-// Add cache instance before createGoatPlugin
+// Add cache instance before createPlugin
 const tokenCache = new NodeCache({
   stdTTL: 1200, // 20 minutes in seconds
   checkperiod: 120, // Check for expired entries every 2 minutes
 });
-
-/*
-// Add near the top with other interfaces
-interface SkipWaitCache {
-    lastTweet: number;
-    action: "WAIT" | "SKIP";
-}
-
-// Add near other cache instances
-const skipWaitCache = new NodeCache({
-    stdTTL: 7200, // 2 hours in seconds
-    checkperiod: 600, // Check for expired entries every 10 minutes
-});
-
-// Add near other interfaces
-interface TweetRateLimit {
-    lastTweet: number;
-    count: number; // Track number of tweets in the time window
-}
-
-// Add near other cache instances
-const tweetRateCache = new NodeCache({
-    stdTTL: 86400, // 24 hours in seconds
-    checkperiod: 3600, // Check every hour
-});
-
-// Add helper function
-function canTweet(tweetType: "trade" | "market_search"): boolean {
-    const now = Date.now();
-    const hourKey = `tweets_${tweetType}_${Math.floor(now / 3600000)}`; // Key by hour and type
-    const rateLimit: TweetRateLimit = tweetRateCache.get(hourKey) || {
-        lastTweet: now,
-        count: 0,
-    };
-
-    // Different limits for different tweet types
-    const MAX_TWEETS_PER_HOUR = {
-        trade: 10,
-        market_search: 10, // Lower limit for market search tweets
-    };
-
-    if (rateLimit.count >= MAX_TWEETS_PER_HOUR[tweetType]) {
-        elizaLogger.warn(
-            `Tweet rate limit reached for ${tweetType}: ${rateLimit.count} tweets this hour`
-        );
-        return false;
-    }
-
-    // Update rate limit
-    tweetRateCache.set(hourKey, {
-        lastTweet: now,
-        count: rateLimit.count + 1,
-    });
-
-    return true;
-}
-*/
 
 // Add new interfaces near the top with other interfaces
 interface TradePerformance {
@@ -260,7 +205,7 @@ interface SellDetailsData {
   sell_price: number;
   sell_timeStamp: string;
   sell_amount: number;
-  received_sol: number;
+  received_sol: number; // Keep field name for compatibility but it's BNB
   sell_value_usd: number;
   profit_usd: number;
   profit_percent: number;
@@ -308,7 +253,7 @@ async function updateSellDetails(
     sell_price: Number(currentPrice),
     sell_timeStamp: new Date().toISOString(),
     sell_amount: tradeAmount,
-    received_sol: tradeAmount,
+    received_sol: tradeAmount, // This is actually BNB but keep field name for compatibility
     sell_value_usd: sellValueUsd,
     profit_usd: profitUsd,
     profit_percent: profitPercent,
@@ -429,17 +374,34 @@ declare module "@elizaos/plugin-trustdb" {
   }
 }
 
+// Replace Solana chain balance with BSC chain balance
 async function getChainBalance(
-  connection: Connection,
-  walletAddress: PublicKey,
+  provider: ethers.providers.JsonRpcProvider,
+  walletAddress: string,
   tokenAddress: string
 ): Promise<number> {
-  // Use existing Solana balance fetching logic
-  return await getTokenBalance(
-    connection as any, // TODO: Resolve type conflict caused by multiple versions of @solana/web3.js
-    walletAddress,
-    new PublicKey(tokenAddress)
-  );
+  try {
+    // Check if this is the native BNB token
+    if (tokenAddress.toLowerCase() === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ||
+        tokenAddress.toLowerCase() === "0x0000000000000000000000000000000000000000") {
+      // Get native BNB balance
+      const balance = await provider.getBalance(walletAddress);
+      return parseFloat(ethers.utils.formatEther(balance));
+    } else {
+      // Get BEP-20 token balance
+      const tokenAbi = ["function balanceOf(address) view returns (uint256)", 
+                        "function decimals() view returns (uint8)"];
+      const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, provider);
+      
+      const balance = await tokenContract.balanceOf(walletAddress);
+      const decimals = await tokenContract.decimals();
+      
+      return parseFloat(ethers.utils.formatUnits(balance, decimals));
+    }
+  } catch (error) {
+    elizaLogger.error(`Error getting balance for ${tokenAddress}:`, error);
+    return 0;
+  }
 }
 
 async function createRabbiTraderPlugin(
@@ -451,29 +413,37 @@ async function createRabbiTraderPlugin(
   // Define resumeTrading at the start of the function
   const resumeTrading = async () => {
     // Load and analyze tokens
-    const tokenAddresses = loadTokenAddresses().filter(
-      (addr) => !addr.startsWith("0x")
-    );
-    elizaLogger.info(`Analyzing ${tokenAddresses.length} Solana tokens...`);
+    const tokenAddresses = loadTokenAddresses();
+    elizaLogger.info(`Analyzing ${tokenAddresses.length} BSC tokens...`);
 
-    // Analyze regular token list
+    // Analyze tokens
     for (const tokenAddress of tokenAddresses) {
-      await analyzeToken(runtime, connection, twitterService, tokenAddress);
+      await analyzeToken(runtime, provider, twitterService, tokenAddress);
     }
 
     // Add delay between iterations
-    await new Promise((resolve) => setTimeout(resolve, 30000)); // 20 minutes
+    await new Promise((resolve) => setTimeout(resolve, 30000));
   };
 
-  elizaLogger.info("Starting GOAT plugin initialization");
+  elizaLogger.info("Starting plugin initialization");
 
-  // Move connection initialization to the top
-  const connection = new Connection(
-    runtime?.getSetting("SOLANA_RPC_URL") ||
-      "https://api.mainnet-beta.solana.com"
-  );
-
-  const keypair = getWalletKeypair(runtime);
+  // Initialize BSC provider and wallet
+  const bscRpcUrl = runtime?.getSetting("BSC_RPC_URL") || 
+    "https://bsc-dataseed1.binance.org/";
+  const provider = new ethers.providers.JsonRpcProvider(bscRpcUrl);
+  
+  const privateKey = runtime?.getSetting("BSC_PRIVATE_KEY");
+  const walletAddress = runtime?.getSetting("BSC_WALLET_ADDRESS");
+  
+  let wallet;
+  if (privateKey) {
+    wallet = new ethers.Wallet(privateKey, provider);
+    elizaLogger.info("BSC wallet initialized with private key");
+  } else if (walletAddress) {
+    elizaLogger.info(`BSC wallet set to address: ${walletAddress}`);
+  } else {
+    elizaLogger.error("No BSC wallet configured");
+  }
 
   // Validate required settings
   const missingSettings: string[] = [];
@@ -489,110 +459,114 @@ async function createRabbiTraderPlugin(
     throw new Error(errorMsg);
   }
 
-  elizaLogger.info("Initializing Solana connection...");
+  elizaLogger.info("Initializing BSC wallet provider...");
+  
+  // Create BSC wallet provider
   const walletProvider: ExtendedWalletProvider = {
-    connection,
-    getChain: () => ({ type: "solana" }),
-    getAddress: () => keypair.publicKey.toBase58(),
-    signMessage: async (_message: string): Promise<Signature> => {
-      throw new Error("Message signing not implemented for Solana wallet");
+    provider, // Replace connection with provider
+    getChain: () => ({ type: "bsc" }),
+    getAddress: () => wallet ? wallet.address : walletAddress,
+    
+    signMessage: async (message: string): Promise<Signature> => {
+      if (!wallet) throw new Error("No private key available for signing");
+      const signature = await wallet.signMessage(message);
+      return { signature, message };
     },
+    
     balanceOf: async (tokenAddress: string): Promise<ExtendedBalance> => {
       try {
-        if (tokenAddress.startsWith("0x")) {
-          // Handle Base token balance
-          const baseBalance = await getChainBalance(
-            connection,
-            keypair.publicKey,
-            tokenAddress
-          );
+        const address = wallet ? wallet.address : walletAddress;
+        if (!address) throw new Error("No wallet address configured");
+        
+        // Handle native BNB token
+        if (tokenAddress.toLowerCase() === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ||
+            tokenAddress.toLowerCase() === "0x0000000000000000000000000000000000000000") {
+          const balance = await provider.getBalance(address);
           return {
-            value: BigInt(baseBalance.toString()),
-            decimals: 18, // Base uses 18 decimals
-            formatted: (baseBalance / 1e18).toString(),
-            symbol: "ETH",
-            name: "Base",
+            value: BigInt(balance.toString()),
+            decimals: 18,
+            formatted: ethers.utils.formatEther(balance),
+            symbol: "BNB",
+            name: "BNB Chain",
           };
         } else {
-          // Existing Solana logic
-          const tokenPublicKey = new PublicKey(tokenAddress);
-          const amount = await getTokenBalance(
-            connection as any, // TODO: Resolve type conflict caused by multiple versions of @solana/web3.js
-            keypair.publicKey,
-            tokenPublicKey
-          );
+          // Handle BEP-20 tokens
+          const tokenAbi = [
+            "function balanceOf(address) view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function symbol() view returns (string)",
+            "function name() view returns (string)"
+          ];
+          
+          const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, provider);
+          const balance = await tokenContract.balanceOf(address);
+          const decimals = await tokenContract.decimals();
+          const symbol = await tokenContract.symbol();
+          const name = await tokenContract.name();
+          
           return {
-            value: BigInt(amount.toString()),
-            decimals: 9,
-            formatted: (amount / 1e9).toString(),
-            symbol: "SOL",
-            name: "Solana",
+            value: BigInt(balance.toString()),
+            decimals,
+            formatted: ethers.utils.formatUnits(balance, decimals),
+            symbol,
+            name,
           };
         }
-      } catch {
-        // do we want logging here?
+      } catch (error) {
+        elizaLogger.error(`Error fetching balance for ${tokenAddress}:`, error);
         return {
           value: BigInt(0),
-          decimals: tokenAddress.startsWith("0x") ? 18 : 9,
+          decimals: 18,
           formatted: "0",
-          symbol: tokenAddress.startsWith("0x") ? "ETH" : "SOL",
-          name: tokenAddress.startsWith("0x") ? "Base" : "Solana",
+          symbol: "BNB",
+          name: "BNB Chain",
         };
       }
     },
+    
     getMaxBuyAmount: async (tokenAddress: string) => {
       try {
-        if (tokenAddress.startsWith("0x")) {
-          // Handle Base chain balance
-          const baseBalance = await getChainBalance(
-            connection,
-            keypair.publicKey,
-            tokenAddress
-          );
-          return (baseBalance * 0.9) / 1e18; // Base uses 18 decimals
-        } else {
-          // Handle Solana balance
-          const balance = await connection.getBalance(keypair.publicKey);
-          return (balance * 0.9) / 1e9; // Solana uses 9 decimals
-        }
+        const address = wallet ? wallet.address : walletAddress;
+        if (!address) return 0;
+        
+        const balance = await provider.getBalance(address);
+        // Use 90% of balance for trading to leave room for gas
+        return Number(ethers.utils.formatEther(balance)) * 0.9;
       } catch (error) {
-        elizaLogger.error(
-          `Failed to get max buy amount for ${tokenAddress}:`,
-          error
-        );
+        elizaLogger.error(`Failed to get max buy amount for ${tokenAddress}:`, error);
         return 0;
       }
     },
-    executeTrade: async (_params) => {
-      //try {
+    
+    executeTrade: async (params) => {
+      if (!wallet) return { success: false, error: "No private key available for trading" };
+      
+      // In a real implementation, you would connect to PancakeSwap or another DEX
+      // This is a placeholder
+      elizaLogger.info(`Executing BSC trade with params:`, params);
+      
       return { success: true };
-      //} catch (error) {
-      //throw error;
-      //}
     },
+    
     getFormattedPortfolio: async () => "",
 
     async get(runtime, _message, _state) {
-      // 获取钱包地址
-      const walletAddress = this.getAddress();
-      // 获取钱包 SOL 余额（单位：lamports），然后转换为 SOL
-      const lamports = await connection.getBalance(keypair.publicKey);
-      const solBalance = lamports / 1e9;
-      // 调用 getFormattedPortfolio（这里你可以根据实际需要实现或返回组合信息）
-      const portfolio = await this.getFormattedPortfolio(runtime);
+      const address = wallet ? wallet.address : walletAddress;
+      if (!address) return { text: "No wallet configured", values: {}, data: {} };
+      
+      // Get BNB balance
+      const bnbBalance = await provider.getBalance(address);
+      const formattedBalance = ethers.utils.formatEther(bnbBalance);
+      
       return {
-        text: `Wallet ${walletAddress}: ${solBalance.toFixed(
-          6
-        )} SOL, Portfolio: ${portfolio}`,
-        values: { walletBalance: solBalance.toFixed(6), walletSymbol: "SOL" },
-        data: { balance: solBalance, portfolio },
+        text: `Wallet ${address}: ${formattedBalance} BNB`,
+        values: { walletBalance: formattedBalance, walletSymbol: "BNB" },
+        data: { balance: parseFloat(formattedBalance) },
       };
     },
   };
 
-  elizaLogger.info(
-    "Solana connection and wallet provider initialized successfully"
-  );
+  elizaLogger.info("BSC wallet provider initialized successfully");
 
   // Initialize Twitter service if enabled
   let twitterService: TwitterService | undefined;
@@ -606,62 +580,74 @@ async function createRabbiTraderPlugin(
 
     if (twitterConfig.enabled && runtime) {
       elizaLogger.info("Starting Twitter client initialization...");
-      // @ts-ignore: mismatched IAgentRuntime from workspace vs dist
-      const twitterClient = await TwitterClientInterface.start(runtime as any as IAgentRuntime);
+      const twitterClient = await TwitterClientInterface.start(runtime as any);
       twitterService = new TwitterService(twitterClient, twitterConfig);
-
-      // Add delay after initialization
       await new Promise((resolve) => setTimeout(resolve, 5000));
-
-      elizaLogger.info("Twitter service initialized successfully", {
-        username: twitterConfig.username,
-        dryRun: twitterConfig.dryRun,
-      });
+      elizaLogger.info("Twitter service initialized successfully");
     }
   } catch (error) {
     elizaLogger.error("Failed to initialize Twitter service:", error);
   }
 
-  elizaLogger.info("Initializing Solana plugin components...");
+  elizaLogger.info("Initializing plugin components...");
 
   try {
     const customActions = actions;
+    
+    // Create trust evaluator and provider for BSC
+    const trustEvaluator = {
+      name: "BSC Trust Evaluator",
+      evaluate: async () => ({ trust: true, score: 0.7 }), // Simplified implementation
+    };
+    
+    const trustScoreProvider = {
+      name: "BSC Trust Score Provider",
+      get: async () => ({ trust: true, score: 0.7 }), // Simplified implementation
+    };
 
-    // Then update the plugin creation
+    // Create BSC plugin equivalent
+    const bscPlugin = {
+      name: "BSC Plugin",
+      evaluators: [trustEvaluator],
+      providers: [trustScoreProvider],
+      actions: [],
+    };
+
+    // Create the plugin
     const plugin: ExtendedPlugin = {
-      name: "[Rabbi Trader] Onchain Actions with Solana Integration",
-      description: "Autonomous trading integration with AI analysis",
-      evaluators: [trustEvaluator, ...(solanaPlugin.evaluators || [])],
+      name: "[Rabbi Trader] Onchain Actions with BNB Chain Integration",
+      description: "Autonomous trading integration with AI analysis for BNB Chain",
+      evaluators: [trustEvaluator, ...(bscPlugin.evaluators || [])],
       providers: [
         walletProvider,
         trustScoreProvider,
-        ...(solanaPlugin.providers || []),
+        ...(bscPlugin.providers || []),
       ],
-      actions: [...customActions, ...(solanaPlugin.actions || [])],
+      actions: [...customActions, ...(bscPlugin.actions || [])],
       services: [],
       autoStart: true,
     };
 
     // Add auto-start trading analysis
-    if (!runtime) return;
+    if (!runtime) return plugin;
 
     elizaLogger.info("Starting autonomous trading system...");
     const analyzeTradeAction = plugin.actions.find(
       (a) => a.name === "ANALYZE_TRADE"
     );
 
-    if (!analyzeTradeAction) return;
+    if (!analyzeTradeAction) return plugin;
 
     const interval = Number(runtime.getSetting("TRADING_INTERVAL")) || 300000;
 
-    // Then start trading loop if enabled
-    if (!settings.ENABLE_TRADING) return;
+    // Start trading loop if enabled
+    if (!settings.ENABLE_TRADING) return plugin;
 
     elizaLogger.info("Initializing trading loop...");
     await resumeTrading();
     setInterval(resumeTrading, interval);
 
-    elizaLogger.info("GOAT plugin initialization completed successfully");
+    elizaLogger.info("Plugin initialization completed successfully");
     return plugin;
   } catch (error) {
     elizaLogger.error("Failed to initialize plugin components:", error);
@@ -675,7 +661,7 @@ async function createRabbiTraderPlugin(
 
 async function analyzeToken(
   runtime: IAgentRuntime,
-  connection: Connection,
+  provider: ethers.providers.JsonRpcProvider,
   twitterService: TwitterService,
   tokenAddress: string
 ) {
@@ -698,15 +684,15 @@ async function analyzeToken(
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    if (!validateSolanaAddress(tokenAddress)) {
+    if (!validateBscAddress(tokenAddress)) {
       elizaLogger.error(`Invalid token address format: ${tokenAddress}`);
       return;
     }
 
-    // Initialize TokenProvider directly with just the token address
+    // Initialize TokenProvider with the token address
     const tokenProvider = new TokenProvider(tokenAddress);
 
-    // Get processed token data which includes DexScreener data
+    // Get processed token data
     elizaLogger.info(`Fetching token data for ${tokenAddress}`);
     const tokenData = await tokenProvider.getProcessedTokenData();
     elizaLogger.info(`Token data fetched for ${tokenAddress}:`, tokenData);
@@ -725,27 +711,11 @@ async function analyzeToken(
     };
     tokenCache.set(tokenAddress, cacheEntry);
 
-    const walletPublicKey = runtime.getSetting("WALLET_PUBLIC_KEY");
-    if (!walletPublicKey) {
-      elizaLogger.error("No wallet public key configured");
-      return;
-    }
-
-    /*
-        const balance = await connection.getBalance(
-            new PublicKey(walletPublicKey)
-        );
-
-        const walletSolBalance = {
-            formatted: (balance / 1e9).toString(),
-        };
-        */
-
     // Initialize trustScoreDb
     const trustScoreDb = new TrustScoreDatabase(runtime.databaseAdapter.db);
 
-    // Before creating analysisParams, get the latest trade performance
-    const latestTrade = trustScoreDb.getLatestTradePerformance(
+    // Get the latest trade performance
+    const latestTrade = await trustScoreDb.getLatestTradePerformance(
       tokenAddress,
       runtime.agentId,
       false // not simulation
@@ -753,12 +723,12 @@ async function analyzeToken(
 
     elizaLogger.info(`Latest trade for ${tokenAddress}:`, latestTrade);
 
-    // Before creating analysisParams, get the correct chain balance
+    // Get wallet balance for BSC
     const walletBalance = await getChainWalletBalance(runtime, tokenAddress);
 
     const pair = tokenData.dexScreenerData.pairs[0];
     const analysisParams: AnalysisParams = {
-      walletBalance, // Now using the correct chain's balance
+      walletBalance,
       tokenAddress,
       price: Number(pair?.priceUsd || 0),
       volume: pair?.volume?.h24 || 0,
@@ -780,7 +750,7 @@ async function analyzeToken(
         : undefined,
     };
 
-    // Create initial state first
+    // Create initial state
     const state: State = await runtime.composeState({
       userId: runtime.agentId,
       agentId: runtime.agentId,
@@ -791,7 +761,7 @@ async function analyzeToken(
       },
     });
 
-    // Then create analysis memory using state
+    // Create analysis memory
     const analysisMemory: Memory = {
       userId: state.userId,
       agentId: runtime.agentId,
@@ -824,7 +794,6 @@ async function analyzeToken(
 
           if (!result) {
             elizaLogger.error(`Invalid analysis result for ${tokenAddress}`);
-
             return [];
           }
 
@@ -837,6 +806,7 @@ async function analyzeToken(
               tokenData,
               twitterService,
               trustScore,
+              provider,
             });
           } else if (result.recommendedAction === "SELL") {
             await sell({
@@ -849,6 +819,7 @@ async function analyzeToken(
               trustScoreDb,
               twitterService,
               trustScore,
+              provider,
             });
           } else {
             elizaLogger.info(
@@ -881,6 +852,7 @@ async function buy({
   result,
   twitterService,
   trustScore,
+  provider,
 }: {
   runtime: IAgentRuntime;
   tokenAddress: string;
@@ -889,6 +861,7 @@ async function buy({
   result: any;
   twitterService: TwitterService;
   trustScore: number;
+  provider: ethers.providers.JsonRpcProvider;
 }) {
   elizaLogger.info(`Trade recommended for ${tokenAddress}:`, result);
 
@@ -906,12 +879,12 @@ async function buy({
 
       const tradeAmount = Math.min(
         result.suggestedAmount || SAFETY_LIMITS.MINIMUM_TRADE,
-        currentBalance * 0.95 // Leave some SOL for fees
+        currentBalance * 0.95 // Leave some BNB for fees
       );
 
       if (tradeAmount < SAFETY_LIMITS.MINIMUM_TRADE) {
         elizaLogger.warn(
-          `Insufficient balance for trade: ${currentBalance} SOL`
+          `Insufficient balance for trade: ${currentBalance} BNB`
         );
       }
 
@@ -934,8 +907,8 @@ async function buy({
       const tradeResult = await executeTrade(runtime, {
         tokenAddress,
         amount: tradeAmount,
-        slippage: tokenAddress.startsWith("0x") ? 0.03 : 0.3, // 3% for Base, 30% for Solana
-        chain: tokenAddress.startsWith("0x") ? "base" : "solana",
+        slippage: 0.03, // 3% for BSC
+        chain: "bsc",
       });
 
       if (tradeResult.success) {
@@ -977,34 +950,27 @@ async function buy({
         const trustScoreDb = new TrustScoreDatabase(runtime.databaseAdapter.db);
 
         try {
-          // Remove the PublicKey validation for Base addresses
           elizaLogger.info(
             `Attempting to validate token address: ${tokenAddress}`
           );
-          const formattedAddress = tokenAddress.startsWith("0x")
-            ? tokenAddress
-            : new PublicKey(tokenAddress).toBase58(); // Only convert Solana addresses
-          elizaLogger.info(
-            `Token address validated successfully: ${formattedAddress}`
-          );
-
+          
           // Create a new recommender ID for this trade
           const uuid = uuidv4();
           const recommender = await trustScoreDb.getOrCreateRecommender({
             id: uuid,
-            address: "",
-            solanaPubkey: runtime.getSetting("WALLET_PUBLIC_KEY") || "",
+            address: runtime.getSetting("BSC_WALLET_ADDRESS") || "",
+            solanaPubkey: "", // Empty for BSC
           });
           elizaLogger.info(`Created/retrieved recommender:`, {
             recommender,
-            chainType: tokenAddress.startsWith("0x") ? "base" : "solana",
+            chainType: "bsc",
           });
 
           // Prepare trade data
           const tradeData = {
             buy_amount: tradeAmount,
             is_simulation: false,
-            token_address: new PublicKey(tokenAddress).toBase58(),
+            token_address: tokenAddress,
             buy_price: tokenData.dexScreenerData.pairs[0]?.priceUsd || 0,
             buy_timeStamp: new Date().toISOString(),
             buy_market_cap: tokenData.dexScreenerData.pairs[0]?.marketCap || 0,
@@ -1019,7 +985,7 @@ async function buy({
           // Create trade record directly using trustScoreDb
           await trustScoreDb.addTradePerformance(
             {
-              token_address: formattedAddress, // Use the properly formatted address
+              token_address: tokenAddress,
               recommender_id: recommender.id,
               buy_price: Number(tradeData.buy_price),
               buy_timeStamp: tradeData.buy_timeStamp,
@@ -1027,7 +993,7 @@ async function buy({
               buy_value_usd: tradeData.buy_value_usd,
               buy_market_cap: tradeData.buy_market_cap,
               buy_liquidity: tradeData.buy_liquidity,
-              buy_sol: tradeAmount,
+              buy_sol: tradeAmount, // Field name remains for compatibility but contains BNB amount
               last_updated: new Date().toISOString(),
               sell_price: 0,
               sell_timeStamp: "",
@@ -1079,7 +1045,6 @@ async function buy({
 }
 
 async function sell({
-  // eslint-disable-next-line
   state,
   runtime,
   tokenAddress,
@@ -1089,6 +1054,7 @@ async function sell({
   latestTrade,
   result,
   trustScore,
+  provider,
 }: {
   state: State;
   runtime: IAgentRuntime;
@@ -1099,33 +1065,17 @@ async function sell({
   result: any;
   latestTrade: TradePerformance;
   trustScore: number;
+  provider: ethers.providers.JsonRpcProvider;
 }) {
   // Get the trade amount from the latest trade
   const tradeAmount = Number(latestTrade?.buy_amount || 0);
-
-  /*
-    // Create and save trade memory object for sell
-    const tradeMemory: Memory = {
-        userId: state.userId,
-        agentId: runtime.agentId,
-        roomId: state.roomId,
-        content: {
-            text: `Execute sell for ${tokenAddress}`,
-            tokenAddress,
-            amount: tradeAmount,
-            action: "SELL",
-            source: "system",
-            type: "trade",
-        },
-    };
-    */
 
   // Execute sell trade
   const tradeResult = await executeTrade(runtime, {
     tokenAddress,
     amount: tradeAmount,
-    slippage: 0.3, //  30% for Solana
-    chain: "solana",
+    slippage: 0.03, // 3% for BSC
+    chain: "bsc",
   });
 
   if (tradeResult.success) {
@@ -1141,8 +1091,8 @@ async function sell({
     const uuid = uuidv4();
     const recommender = await trustScoreDb.getOrCreateRecommender({
       id: uuid,
-      address: "", // Empty since we're only handling Solana
-      solanaPubkey: runtime.getSetting("WALLET_PUBLIC_KEY") || "",
+      address: runtime.getSetting("BSC_WALLET_ADDRESS") || "",
+      solanaPubkey: "", // Empty for BSC
     });
 
     // Update sell details and get prices

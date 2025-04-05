@@ -9,21 +9,22 @@
         "@elizaos/core": "workspace:*",
         "@elizaos/plugin-solana": "0.1.9",
         "@elizaos/plugin-trustdb": "0.1.9",
-        "@solana/web3.js": "1.95.8",
-        "zod": "3.23.8",
         "@goat-sdk/core": "0.3.8",
         "@goat-sdk/plugin-coingecko": "0.1.4",
         "@goat-sdk/plugin-erc20": "0.1.7",
         "@goat-sdk/wallet-viem": "0.1.3",
+        "@solana/web3.js": "1.95.8",
         "bignumber": "1.1.0",
         "bignumber.js": "9.1.2",
         "node-cache": "^5.1.2",
         "tsup": "8.3.5",
-        "ws": "^8.0.0"
+        "uuid": "^11.1.0",
+        "ws": "^8.0.0",
+        "zod": "3.23.8"
     },
     "devDependencies": {
-        "vitest": "^3.0.0",
-        "@vitest/coverage-v8": "^1.2.1"
+        "@vitest/coverage-v8": "^1.2.1",
+        "vitest": "^3.0.0"
     },
     "scripts": {
         "build": "tsup --format esm --dts",
