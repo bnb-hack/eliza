@@ -16,6 +16,7 @@ export default defineConfig({
         "http",
         "agentkeepalive",
         "viem",
-        "@lifi/sdk"
+        "@lifi/sdk",
+        "@elizaos/plugin-bnb"
     ],
 });

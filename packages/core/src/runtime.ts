@@ -477,7 +477,7 @@ export class AgentRuntime implements IAgentRuntime {
             }
         }
 
-        // should already be initiailized
+        
         elizaLogger.info(`Number of plugins: ${this.plugins.length}`);
 
         let rabbiplugin = this.plugins[1]
@@ -499,25 +499,19 @@ export class AgentRuntime implements IAgentRuntime {
             this.registerAdapter(adapter);
         });
         
-        this.providers.forEach((provider, idx) => {
-            elizaLogger.info(`Provider #${idx}:`, {
-              ctor: Object.getPrototypeOf(provider).constructor.name,
-              props: Object.keys(provider),
-              raw: provider,
-            });
-          });
-          
 
+        if (rabbiplugin.services)
+        await Promise.all(
+            rabbiplugin.services?.map((service) => service.initialize(this)),
+        );
+        
+        // should already be initiailized
         // for (const plugin of this.plugins) {
         //     if (plugin.services)
         //         await Promise.all(
         //             plugin.services?.map((service) => service.initialize(this)),
         //         );
         // }
-        if (rabbiplugin.services)
-                await Promise.all(
-                    rabbiplugin.services?.map((service) => service.initialize(this)),
-                );
 
         if (
             this.character &&

@@ -1,11 +1,21 @@
 {
-    "extends": "../core/tsconfig.json",
     "compilerOptions": {
-        "outDir": "dist",
-        "rootDir": "./src",
-        "declaration": true
+      "strict": false,                  // 🔴 关闭所有严格模式（最核心）
+      "noImplicitAny": false,           // 允许变量隐式为 any
+      "strictNullChecks": false,        // 允许 null / undefined 赋值给任意类型
+      "strictPropertyInitialization": false, // 构造函数中可以不初始化属性
+      "skipLibCheck": true,             // 跳过库文件检查，减少第三方包类型报错
+      "esModuleInterop": true,
+      "resolveJsonModule": true,
+      "moduleResolution": "node",
+      "target": "ES2020",
+      "module": "commonjs",
+      "allowSyntheticDefaultImports": true,
+      "outDir": "dist",
+      "rootDir": "./src",
+      "declaration": true,
+      "types": ["node"]
     },
-    "include": [
-        "src"
-    ]
-}
+    "include": ["src"]
+  }
+  

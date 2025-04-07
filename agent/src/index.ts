@@ -22,6 +22,7 @@ import {
 import { defaultCharacter } from "./defaultCharacter.ts";
 import { mainCharacter } from "./nader.character.ts";
 import createRabbiTraderPlugin from '@elizaos/plugin-rabbi-trader';
+import createBataPlugin from '@elizaos/plugin-bata';
 
 import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
 import JSON5 from 'json5';
@@ -727,6 +728,7 @@ async function findDatabaseAdapter(runtime: AgentRuntime) {
     throw new Error("Multiple database adapters found. You must have no more than one. Adjust your plugins configuration.");
     }
   const adapterInterface = adapter?.init(runtime);
+  elizaLogger.info("[DEBUG] Loaded adapters:", adapters);
   return adapterInterface;
 }
 
@@ -757,9 +759,7 @@ async function startAgent(
         );
 
         runtime.plugins.push(rabbiTraderPlugin);
-
         
-
         // initialize cache
         const cache = initializeCache(
             process.env.CACHE_STORE ?? CacheStore.DATABASE,

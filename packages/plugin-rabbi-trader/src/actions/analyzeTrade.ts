@@ -4,6 +4,7 @@ import {
   generateText,
   ModelClass,
   parseJSONObjectFromText,
+  type HandlerCallback
 } from "@elizaos/core";
 
 export const analyzeTradeAction: Action = {
@@ -64,11 +65,11 @@ ${JSON.stringify(tokenData, null, 2)}
         throw new Error("No analysis generated");
       }
 
-      elizaLogger.log(`Raw analysis response:`, content);
+      elizaLogger.info(`Raw analysis response:`, content);
 
       // Parse the response to get the recommended action
       const recommendation = parseJSONObjectFromText(content);
-      elizaLogger.log(
+      elizaLogger.info(
         `Parsed recommendation for ${params.tokenAddress}:`,
         recommendation
       );

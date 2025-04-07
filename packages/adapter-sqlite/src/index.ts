@@ -1108,7 +1108,7 @@ const sqliteDatabaseAdapter: Adapter = {
         // Test the connection
         db.init()
             .then(() => {
-                elizaLogger.success(
+                elizaLogger.info(
                     "Successfully connected to SQLite database"
                 );
             })
